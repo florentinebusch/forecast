@@ -40,57 +40,57 @@ async function getPlaceName(url) {
 
 // MET Norway Vorhersage visualisieren
 async function showForecast(latlng) {
-    console.log("Popup erzeugen bei:", latlng);
+    //console.log("Popup erzeugen bei:", latlng);
     let url = `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${latlng.lat}&lon=${latlng.lng}`;
     let osmUrl = `https://nominatim.openstreetmap.org/reverse?lat=${latlng.lat}&lon=${latlng.lng}&zoom=15&format=jsonv2`;
     let placeName = await getPlaceName(osmUrl);
 
-//console.log(url);
+    //console.log(url);
     let response = await fetch(url);
     let jsondata = await response.json();
     //console.log(jsondata);
+
+    // Popup erzeugen
+    let details = jsondata.properties.timeseries[0].data.instant.details;
+    let timestamp = new Date(jsondata.properties.meta.updated_at);
+    let markup = `
+        <h3>Wettervorhersage für ${timestamp.toLocaleString()}</h3>
+        <small>Ort: ${placeName}</small>
+        <ul>
+            <li>Luftdruck (hPa): ${details.air_pressure_at_sea_level}</li>
+            <li>Lufttemperatur (°C): ${details.air_temperature}</li>
+            <li>Bewölkungsgrad (%): ${details.cloud_area_fraction}</li>
+            <li>Luftfeuchtigkeit (%): ${details.relative_humidity}</li>
+            <li>Windrichtung (°): ${details.wind_from_direction}</li>
+            <li>Windgeschwindigkeit (km/h): ${details.wind_speed}</li>
+        </ul>
+    `;
+
+    // Wettericons für die nächsten 24 Stunden in 3 Stunden Schritten
+    for (let i=0; i <=24; i += 3) {
+        let symbol = jsondata.properties.timeseries[i].data.next_1_hours.summary.symbol_code;
+        let time = new Date(jsondata.properties.timeseries[i].time);
+        markup += `<img src="icons/${symbol}.svg" style="width:32px" title="${time.toLocaleString()}">`;
+    }
+
+    // Links zu den JSON-Daten
+    markup += `
+    <p>
+        <a href="${url}" target="forecast">Daten downloaden</a> |
+        <a href="${osmUrl}" target="forecast"> OSM Details zum Ort</a>
+    </p>
+    `;
+
+    L.popup([
+        latlng.lat, latlng.lng
+    ], {
+        content: markup
+    }).openOn(overlays.forecast);
 }
-
-// Popup erzeugen
-let details = jsondata.properties.timeseries[0].data.instant.details;
-
-let timestamp = new Date(jsondata.properties.meta.updated_at);
-let markup = `
-    <h3>Wettervorhersage für ${timestamp.toLocaleString()}</h3>
-    <small>Ort: ${placeName}</small>
-
-<ul>
-  <li>Luftdruck (hPa): ${details.air_pressure_at_sea_level}</li>
-    <li>Lufttemperatur (°C): ${details.air_temperature}</li>
-    <li>Bewölkungsgrad (%): ${details.cloud_area_fraction}</li>
-    <li>Luftfeuchtigkeit (%): ${details.relative_humidity}</li>
-    <li>Windrichtung (°): ${details.wind_from_direction}</li>
-    <li>Windgeschwindigkeit (km/h): ${details.wind_speed}</li>
-</ul>
-  `;
-
-// Wettericons für die nächsten 24 Stunden in 3 Stunden Schritten
-for (let i=0; i <=24; i += 3) {
-let symbol = jsondata.properties.timeseries[i].data.next_1_hours.summary.symbol_code;
-let time = new Date(jsondata.properties.timeseries[i].time);
-    markup += `<img src="icons/${symbol}.svg" style="width:32px" title="${time.toLocaleString()}">`;
-}
-
- // Links zu den JSON-Daten
-markup += `
-<p>
-    <a href="${url}" target="forecast">Daten downloaden</a> |
-    <a href="${osmUrl}" target="forecast"> OSM Details zum Ort</a>
- </p>
-`;
-
-L.popup([latlng.lat, latlng.lng], {
-    content: markup
-}).openOn(overlays.forecast);
 
 // auf Kartenklick reagieren
-map.on("click", function(evt){
-    console.log(evt.latlng);
+map.on("click", function(evt) {
+    //console.log(evt.latlng);
     showForecast(evt.latlng);
 })
 
@@ -99,5 +99,4 @@ map.fire("click", {
     latlng: {
         lat: ibk.lat,
         lng: ibk.lng,
-    }
-});
+    }});
