@@ -30,6 +30,37 @@ L.control.scale({
     imperial: false,
 }).addTo(map);
 
+// ECMWF Windanimation mit Leaflet Velocity
+async function loadWind(url) {
+    let response = await fetch(url)
+    let jsondata = await response.json();
+    //console.log(jsondata[0].header.refTime);
+    //console.log(jsondate[0].header.forecasteTime);
+    let forecastDate = new Date(jsondata[0].header.refTime);
+    forecasteDate.setHours(forecasteDate.getHours() + jsondata[0].header.forecastTime);
+   // console.log(forecasteDate)
+
+   let forecastSpan = document.querySelector("forecast-link");
+   console.log(forecastSpan)
+   forecastSpan.innerHTML = `
+        (< a href= "${url}" target="met.no">${forecastDate.toLocaleString()}</a>)
+   `;
+
+   L.velocityLayer({
+        data: jsondata,
+        lineWidth: 2,
+        displayOptions: {
+            directionString: "Windrichtung",
+            speedString: "Windgeschwindigkeiten",
+            speedUnit: "km/h",
+            position: "bottomrightt",
+            velocityType: "",
+            emptyString: "keine Winddaten",
+        }
+   }).addTo(overlays.wind);
+}
+loadWind("https://geographie.uibk.ac.at/data/ecmwf/data/wind-10u-10v-europe.json");
+
 // Ort über OpenStreetmap reverse geocoding bestimmen
 async function getPlaceName(url) {
     let response = await fetch(url);
@@ -102,26 +133,3 @@ map.fire("click", {
         lng: ibk.lng,
     }
 })
-
-async function addWindLayer() {
-    let url = "https://geographie.uibk.ac.at/data/ecmwf/data/wind-10u-10v-europe.json";
-    let response = await fetch(url);
-    let winddata = await response.json();
-
-    L.velocityLayer({
-        data: winddata,
-        displayValues: true,
-        displayOptions: {
-            velocityType: "Global Wind",
-            position: "bottomleft",
-            emptyString: "No velocity data",
-            angleConvention: "bearingCW",
-            showCardinal: false,
-            speedUnit: "ms",
-            directionString: "Direction",
-            speedString: "Speed",
-        },
-    }).addTo(overlays.wind);
-}
-
-addWindLayer();
